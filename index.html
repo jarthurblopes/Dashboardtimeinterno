@@ -1050,6 +1050,52 @@ tr:hover td { background: var(--surface2); color: var(--text); }
 }
 
 /* ══════════════════════════
+   LEADS INNER TABS
+══════════════════════════ */
+.leads-inner-tab {
+  padding: 9px 20px;
+  font-size: 13px; font-weight: 500;
+  cursor: pointer; border: none; background: transparent;
+  color: var(--text2);
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.leads-inner-tab:hover { color: var(--text); }
+.leads-inner-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* pill de motivo na tabela manual */
+.motivo-pill {
+  display: inline-block; padding: 2px 9px; border-radius: 12px;
+  font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.mp-posvenda      { background: rgba(139,92,246,0.15); color: #a78bfa; }
+.mp-reprovado     { background: rgba(239,68,68,0.12);  color: #f87171; }
+.mp-naorespondeu  { background: rgba(245,158,11,0.12); color: #fbbf24; }
+.mp-integrador    { background: rgba(59,130,246,0.12); color: #60a5fa; }
+.mp-emprego       { background: rgba(16,185,129,0.12); color: #34d399; }
+.mp-foradoraio    { background: rgba(249,115,22,0.12); color: #fb923c; }
+.mp-outro         { background: rgba(148,163,184,0.12);color: #94a3b8; }
+
+/* botão excluir linha */
+.btn-del-lead {
+  background: none; border: none; cursor: pointer;
+  color: var(--text3); font-size: 15px; padding: 3px 6px;
+  border-radius: 6px; transition: all 0.12s;
+}
+.btn-del-lead:hover { color: var(--red); background: rgba(239,68,68,0.08); }
+
+/* filtro rápido por motivo */
+.leads-filter-pill {
+  padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 500;
+  cursor: pointer; border: 0.5px solid var(--border2);
+  background: var(--surface2); color: var(--text2); transition: all 0.15s;
+}
+.leads-filter-pill.active, .leads-filter-pill:hover {
+  background: var(--accent); color: #000; border-color: var(--accent);
+}
+
+/* ══════════════════════════
    MISC
 ══════════════════════════ */
 .divider { height: 0.5px; background: var(--border); margin: 18px 0; }
@@ -1350,52 +1396,166 @@ tr:hover td { background: var(--surface2); color: var(--text); }
           <div class="section-title-text">📥 Análise de Leads</div>
         </div>
 
-        <!-- Upload de Leads -->
-        <div class="card" style="margin-bottom:14px;">
-          <div class="card-title"><span class="card-title-icon">📂</span> Importar Planilha de Leads</div>
-          <div class="leads-drop-zone" id="leadsDropZone">
-            <input type="file" id="leadsFileInput" accept=".xlsx,.xls,.csv"
-                   onchange="handleLeadsFile(this.files[0])" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;">
-            <div style="font-size:28px;margin-bottom:8px;">📊</div>
-            <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Arraste o arquivo ou clique para selecionar</div>
-            <div style="font-size:12px;color:var(--text2);">Aceita .xlsx, .xls e .csv</div>
-            <div style="display:flex;gap:6px;justify-content:center;margin-top:10px;">
-              <span class="fbadge-leads green">Excel .xlsx</span>
-              <span class="fbadge-leads blue">CSV</span>
-            </div>
-          </div>
-          <div id="leadsFileInfo" style="display:none;margin-top:10px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text2);"></div>
+        <!-- Abas internas: Manual / Importar -->
+        <div class="leads-tabs" style="display:flex;gap:0;border-bottom:0.5px solid var(--border);margin-bottom:18px;">
+          <button class="leads-inner-tab active" id="ltab-manual" onclick="switchLeadsTab('manual',this)">✏️ Cadastro Manual</button>
+          <button class="leads-inner-tab" id="ltab-import" onclick="switchLeadsTab('import',this)">📂 Importar Planilha</button>
         </div>
 
-        <!-- Filtro de vendedores -->
-        <div class="month-filters-wrap" id="leadsVendFiltroWrap" style="display:none;padding:0 0 14px 0;"></div>
+        <!-- ── PAINEL MANUAL ── -->
+        <div id="leadsPanel-manual">
 
-        <!-- Gráfico de motivos -->
-        <div class="card" id="leadsChartCard" style="display:none;">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-            <div class="card-title" style="margin:0"><span class="card-title-icon">📈</span> Motivos de Não Fechamento</div>
-            <div style="display:flex;gap:6px;">
-              <button class="btn-secondary leads-chart-btn active" id="btnChartBar" onclick="toggleLeadsChart('bar',this)">Barras</button>
-              <button class="btn-secondary leads-chart-btn" id="btnChartPie" onclick="toggleLeadsChart('pie',this)">Pizza</button>
+          <!-- Formulário de cadastro -->
+          <div class="card" style="margin-bottom:14px;">
+            <div class="card-title"><span class="card-title-icon">✏️</span> Registrar Lead Não Fechado</div>
+            <div class="form-grid" style="margin-bottom:14px;">
+              <div class="form-field">
+                <label class="form-label">Data</label>
+                <input class="form-input" type="date" id="lData">
+              </div>
+              <div class="form-field">
+                <label class="form-label">Unidade</label>
+                <select class="form-select" id="lUnidade">
+                  <option value="">Selecione a unidade</option>
+                  <option>Palmas</option>
+                  <option>Boa Vista</option>
+                  <option>João Pessoa</option>
+                  <option>Maceió</option>
+                  <option>Arapiraca</option>
+                  <option>Paulista</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Número / Contato</label>
+                <input class="form-input" type="text" id="lNumero" placeholder="Ex: 82 99999-0000">
+              </div>
+              <div class="form-field">
+                <label class="form-label">Vendedor</label>
+                <select class="form-select" id="lVendedor">
+                  <option value="">Selecione o vendedor</option>
+                  <option>Arthur</option>
+                  <option>Weverson</option>
+                  <option>Victor</option>
+                  <option>Eliezer</option>
+                  <option>Jonatan</option>
+                  <option>Elizangela</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Motivo do Não Fechamento</label>
+                <select class="form-select" id="lMotivo">
+                  <option value="">Selecione o motivo</option>
+                  <option>Pós-venda</option>
+                  <option>Reprovado no financiamento</option>
+                  <option>Não respondeu</option>
+                  <option>Integrador</option>
+                  <option>Emprego</option>
+                  <option>Fora do raio</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Observação (opcional)</label>
+                <input class="form-input" type="text" id="lObs" placeholder="Detalhes adicionais…">
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+              <button class="btn-primary" onclick="adicionarLeadManual()">＋ Adicionar Lead</button>
+              <span id="leadManualMsg" style="font-size:12px;"></span>
             </div>
           </div>
-          <div id="leadsSummaryCards" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;"></div>
-          <div style="position:relative;width:100%;height:300px;">
-            <canvas id="chartLeads"></canvas>
-          </div>
-          <div id="leadsTableWrap" style="margin-top:16px;overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;font-size:12px;">
-              <thead>
-                <tr>
-                  <th style="text-align:left;padding:7px 10px;border-bottom:0.5px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">Motivo</th>
-                  <th style="text-align:right;padding:7px 10px;border-bottom:0.5px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">Qtd</th>
-                  <th style="text-align:right;padding:7px 10px;border-bottom:0.5px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">%</th>
-                </tr>
-              </thead>
-              <tbody id="leadsTableBody"></tbody>
-            </table>
+
+          <!-- Tabela de leads cadastrados -->
+          <div class="card" id="leadsManualCard" style="display:none;">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+              <div class="card-title" style="margin:0"><span class="card-title-icon">📋</span> Leads cadastrados — <span id="leadsManualCount">0</span> registros</div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="exportarLeadsExcel()">⬇ Exportar Excel</button>
+                <button class="btn-danger" style="font-size:12px;padding:6px 14px;" onclick="limparLeadsManual()">🗑 Limpar tudo</button>
+              </div>
+            </div>
+
+            <!-- Filtros rápidos -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;" id="leadsManualFiltros"></div>
+
+            <div style="overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-size:12px;" id="leadsManualTable">
+                <thead>
+                  <tr>
+                    <th style="text-align:left;padding:8px 10px;border-bottom:0.5px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;">Data</th>
+                    <th style="text-align:left;padding:8px 10px;border-bottom:0.5px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">Unidade</th>
+                    <th style="text-align:left;padding:8px 10px;border-bottom:0.5px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">Número</th>
+                    <th style="text-align:left;padding:8px 10px;border-bottom:0.5px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">Vendedor</th>
+                    <th style="text-align:left;padding:8px 10px;border-bottom:0.5px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">Motivo</th>
+                    <th style="text-align:left;padding:8px 10px;border-bottom:0.5px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">Obs</th>
+                    <th style="text-align:center;padding:8px 10px;border-bottom:0.5px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">Ação</th>
+                  </tr>
+                </thead>
+                <tbody id="leadsManualBody"></tbody>
+              </table>
+            </div>
+
+            <!-- Gráfico resumo dos cadastrados -->
+            <div style="margin-top:20px;border-top:0.5px solid var(--border);padding-top:16px;">
+              <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">Resumo por motivo</div>
+              <div id="leadsManualSummary" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
+              <div style="position:relative;width:100%;height:240px;">
+                <canvas id="chartLeadsManual"></canvas>
+              </div>
+            </div>
           </div>
         </div>
+
+        <!-- ── PAINEL IMPORTAR ── -->
+        <div id="leadsPanel-import" style="display:none;">
+
+          <!-- Upload de Leads -->
+          <div class="card" style="margin-bottom:14px;">
+            <div class="card-title"><span class="card-title-icon">📂</span> Importar Planilha de Leads</div>
+            <div class="leads-drop-zone" id="leadsDropZone">
+              <input type="file" id="leadsFileInput" accept=".xlsx,.xls,.csv"
+                     onchange="handleLeadsFile(this.files[0])" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;">
+              <div style="font-size:28px;margin-bottom:8px;">📊</div>
+              <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Arraste o arquivo ou clique para selecionar</div>
+              <div style="font-size:12px;color:var(--text2);">Aceita .xlsx, .xls e .csv</div>
+              <div style="display:flex;gap:6px;justify-content:center;margin-top:10px;">
+                <span class="fbadge-leads green">Excel .xlsx</span>
+                <span class="fbadge-leads blue">CSV</span>
+              </div>
+            </div>
+            <div id="leadsFileInfo" style="display:none;margin-top:10px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text2);"></div>
+          </div>
+
+          <!-- Filtro de vendedores (gerado dinamicamente após upload) -->
+          <div class="month-filters-wrap" id="leadsVendFiltroWrap" style="display:none;padding:0 0 14px 0;"></div>
+
+          <!-- Gráfico de motivos (upload) -->
+          <div class="card" id="leadsChartCard" style="display:none;">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+              <div class="card-title" style="margin:0"><span class="card-title-icon">📈</span> Motivos de Não Fechamento</div>
+              <div style="display:flex;gap:6px;">
+                <button class="btn-secondary leads-chart-btn active" id="btnChartBar" onclick="toggleLeadsChart('bar',this)">Barras</button>
+                <button class="btn-secondary leads-chart-btn" id="btnChartPie" onclick="toggleLeadsChart('pie',this)">Pizza</button>
+              </div>
+            </div>
+            <div id="leadsSummaryCards" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;"></div>
+            <div style="position:relative;width:100%;height:300px;">
+              <canvas id="chartLeads"></canvas>
+            </div>
+            <div id="leadsTableWrap" style="margin-top:16px;overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <thead>
+                  <tr>
+                    <th style="text-align:left;padding:7px 10px;border-bottom:0.5px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">Motivo</th>
+                    <th style="text-align:right;padding:7px 10px;border-bottom:0.5px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">Qtd</th>
+                    <th style="text-align:right;padding:7px 10px;border-bottom:0.5px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">%</th>
+                  </tr>
+                </thead>
+                <tbody id="leadsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
       </section>
 
     </div><!-- /page-content -->
@@ -1472,6 +1632,247 @@ function renderRankingFull() {
   const snap = document.getElementById('rankingList');
   if(rankFull && snap) rankFull.innerHTML = snap.innerHTML;
 }
+
+/* ════════════════════════════════════════════════
+   LEADS — ABAS INTERNAS
+════════════════════════════════════════════════ */
+window.switchLeadsTab = function(tab, el) {
+  document.querySelectorAll('.leads-inner-tab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('leadsPanel-manual').style.display = tab === 'manual' ? 'block' : 'none';
+  document.getElementById('leadsPanel-import').style.display = tab === 'import'  ? 'block' : 'none';
+};
+
+/* ════════════════════════════════════════════════
+   LEADS — CADASTRO MANUAL
+════════════════════════════════════════════════ */
+let leadsManual = JSON.parse(localStorage.getItem('leadsManual') || '[]');
+let leadsManualFiltro = 'Todos';
+
+// Cores por motivo para pills e gráfico
+const MOTIVO_STYLE = {
+  'Pós-venda':                  { cls: 'mp-posvenda',     color: '#a78bfa' },
+  'Reprovado no financiamento': { cls: 'mp-reprovado',    color: '#f87171' },
+  'Não respondeu':              { cls: 'mp-naorespondeu', color: '#fbbf24' },
+  'Integrador':                 { cls: 'mp-integrador',   color: '#60a5fa' },
+  'Emprego':                    { cls: 'mp-emprego',      color: '#34d399' },
+  'Fora do raio':               { cls: 'mp-foradoraio',   color: '#fb923c' },
+};
+
+function getMotivoStyle(m) {
+  return MOTIVO_STYLE[m] || { cls: 'mp-outro', color: '#94a3b8' };
+}
+
+function salvarLeadsLocal() {
+  localStorage.setItem('leadsManual', JSON.stringify(leadsManual));
+}
+
+window.adicionarLeadManual = function() {
+  const data     = document.getElementById('lData').value;
+  const unidade  = document.getElementById('lUnidade').value;
+  const numero   = document.getElementById('lNumero').value.trim();
+  const vendedor = document.getElementById('lVendedor').value;
+  const motivo   = document.getElementById('lMotivo').value;
+  const obs      = document.getElementById('lObs').value.trim();
+  const msg      = document.getElementById('leadManualMsg');
+
+  if (!data)     { showLeadMsg('Informe a data.',              'err'); return; }
+  if (!unidade)  { showLeadMsg('Selecione a unidade.',         'err'); return; }
+  if (!numero)   { showLeadMsg('Informe o número de contato.', 'err'); return; }
+  if (!vendedor) { showLeadMsg('Selecione o vendedor.',        'err'); return; }
+  if (!motivo)   { showLeadMsg('Selecione o motivo.',          'err'); return; }
+
+  const lead = {
+    id:       Date.now(),
+    data,
+    unidade,
+    numero,
+    vendedor,
+    motivo,
+    obs,
+    criadoEm: new Date().toISOString()
+  };
+
+  leadsManual.push(lead);
+  salvarLeadsLocal();
+
+  // Limpar campos (mantém data, unidade e vendedor para agilizar cadastro em série)
+  document.getElementById('lNumero').value = '';
+  document.getElementById('lMotivo').value = '';
+  document.getElementById('lObs').value    = '';
+
+  showLeadMsg('Lead adicionado! ✓', 'ok');
+  setTimeout(() => { document.getElementById('leadManualMsg').textContent = ''; }, 2500);
+
+  renderLeadsManual();
+};
+
+function showLeadMsg(txt, tipo) {
+  const el = document.getElementById('leadManualMsg');
+  el.textContent = txt;
+  el.style.color = tipo === 'ok' ? 'var(--green)' : 'var(--red)';
+}
+
+window.removerLeadManual = function(id) {
+  leadsManual = leadsManual.filter(l => l.id !== id);
+  salvarLeadsLocal();
+  renderLeadsManual();
+};
+
+window.limparLeadsManual = function() {
+  if (!confirm('Apagar todos os leads cadastrados manualmente?')) return;
+  leadsManual = [];
+  salvarLeadsLocal();
+  renderLeadsManual();
+};
+
+function renderLeadsManual() {
+  const card = document.getElementById('leadsManualCard');
+  const body = document.getElementById('leadsManualBody');
+  const countEl = document.getElementById('leadsManualCount');
+
+  if (!leadsManual.length) {
+    if (card) card.style.display = 'none';
+    return;
+  }
+
+  card.style.display = 'block';
+
+  // Filtro ativo
+  const filtered = leadsManualFiltro === 'Todos'
+    ? leadsManual
+    : leadsManual.filter(l => l.motivo === leadsManualFiltro);
+
+  countEl.textContent = leadsManual.length;
+
+  // Gerar pills de filtro
+  const motivos = ['Todos', ...Object.keys(
+    leadsManual.reduce((a, l) => { a[l.motivo] = 1; return a; }, {})
+  )];
+  document.getElementById('leadsManualFiltros').innerHTML = motivos.map(m => `
+    <button class="leads-filter-pill ${m === leadsManualFiltro ? 'active' : ''}"
+            onclick="filtrarLeadsManual('${m}')">${m}</button>`).join('');
+
+  // Linhas da tabela
+  body.innerHTML = filtered
+    .sort((a, b) => b.data.localeCompare(a.data)) // mais recente primeiro
+    .map(l => {
+      const st = getMotivoStyle(l.motivo);
+      const dataFmt = l.data ? l.data.split('-').reverse().join('/') : '—';
+      return `<tr>
+        <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);white-space:nowrap;color:var(--text2);">${dataFmt}</td>
+        <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);">${l.unidade}</td>
+        <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);">${l.numero}</td>
+        <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);font-weight:500;">${l.vendedor}</td>
+        <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);">
+          <span class="motivo-pill ${st.cls}">${l.motivo}</span>
+        </td>
+        <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);color:var(--text2);font-size:11px;">${l.obs || '—'}</td>
+        <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);text-align:center;">
+          <button class="btn-del-lead" onclick="removerLeadManual(${l.id})" title="Remover">✕</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+  // Gráfico de resumo
+  renderChartLeadsManual();
+}
+
+function renderChartLeadsManual() {
+  const counts = {};
+  leadsManual.forEach(l => { counts[l.motivo] = (counts[l.motivo] || 0) + 1; });
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const total  = leadsManual.length;
+
+  // Summary pills
+  document.getElementById('leadsManualSummary').innerHTML = sorted.map(([m, c]) => {
+    const st = getMotivoStyle(m);
+    return `<div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:8px;padding:8px 14px;">
+      <div style="font-size:20px;font-weight:700;color:${st.color};font-family:'DM Mono',monospace;">${c}</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:2px;">${m}</div>
+      <div style="font-size:10px;color:var(--text3);">${Math.round(c/total*100)}%</div>
+    </div>`;
+  }).join('');
+
+  const ctx = document.getElementById('chartLeadsManual');
+  if (!ctx) return;
+  if (window._app.charts.leadsManual) window._app.charts.leadsManual.destroy();
+
+  window._app.charts.leadsManual = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(([m]) => m),
+      datasets: [{
+        data: sorted.map(([, c]) => c),
+        backgroundColor: sorted.map(([m]) => getMotivoStyle(m).color + 'bb'),
+        borderColor:     sorted.map(([m]) => getMotivoStyle(m).color),
+        borderWidth: 1.5,
+        borderRadius: 6,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.raw} leads (${Math.round(ctx.raw/total*100)}%)` } }
+      },
+      scales: {
+        x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+window.filtrarLeadsManual = function(motivo) {
+  leadsManualFiltro = motivo;
+  renderLeadsManual();
+};
+
+/* ── EXPORTAR PARA EXCEL ── */
+window.exportarLeadsExcel = function() {
+  if (!leadsManual.length) {
+    alert('Nenhum lead cadastrado para exportar.');
+    return;
+  }
+
+  // Monta o CSV no formato que o Excel abre corretamente
+  const sep = ';';
+  const cabecalho = ['Data','Unidade','Número/Contato','Vendedor','Motivo','Observação'].join(sep);
+  const linhas = leadsManual
+    .sort((a, b) => b.data.localeCompare(a.data))
+    .map(l => [
+      l.data ? l.data.split('-').reverse().join('/') : '',
+      l.unidade,
+      l.numero,
+      l.vendedor,
+      l.motivo,
+      l.obs || ''
+    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(sep));
+
+  const bom   = '﻿'; // BOM para UTF-8 no Excel
+  const csv   = bom + [cabecalho, ...linhas].join('
+');
+  const blob  = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url   = URL.createObjectURL(blob);
+  const a     = document.createElement('a');
+  const hoje  = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+  a.href      = url;
+  a.download  = `leads_nao_fechados_${hoje}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// Definir data padrão = hoje ao carregar
+window.addEventListener('DOMContentLoaded', () => {
+  const lData = document.getElementById('lData');
+  if (lData) lData.value = new Date().toISOString().split('T')[0];
+
+  // Carregar leads salvos
+  if (leadsManual.length) renderLeadsManual();
+});
 
 // Admin: role label
 window.addEventListener('load', () => {
