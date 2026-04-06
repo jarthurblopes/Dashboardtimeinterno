@@ -139,6 +139,9 @@ window.loadData = async () => {
     renderMetaGlobal();
     renderMetaVendedores();
 
+    // Carregar leads do Firestore
+    await window.loadLeadsFirestore();
+
     // Atualiza select de vendedores se admin (pode ter novos após load)
     if (window._app.isAdmin) {
       setTimeout(loadVendedoresSelect, 200);
@@ -148,6 +151,43 @@ window.loadData = async () => {
     showToast('Erro ao carregar dados.', 'error');
   }
   showLoading(false);
+};
+
+/* ═══════════════════════════════════════════════════════
+   LEADS — FIRESTORE
+═══════════════════════════════════════════════════════ */
+
+// Carrega todos os leads do Firestore e popula leadsManual
+window.loadLeadsFirestore = async () => {
+  try {
+    const { db, collection, getDocs, query, orderBy } = window._app;
+    const q    = query(collection(db, "leads"), orderBy("criadoEm", "desc"));
+    const snap = await getDocs(q);
+    // Atualiza o array global (definido no script principal)
+    window._leadsManual = snap.docs.map(d => ({ firestoreId: d.id, ...d.data() }));
+    if (typeof renderLeadsManual === 'function') renderLeadsManual();
+  } catch(e) {
+    console.error("Erro ao carregar leads:", e);
+  }
+};
+
+// Salva um lead no Firestore e retorna o id gerado
+window.salvarLeadFirestore = async (lead) => {
+  const { db, collection, addDoc } = window._app;
+  const ref = await addDoc(collection(db, "leads"), lead);
+  return ref.id;
+};
+
+// Remove um lead do Firestore
+window.removerLeadFirestore = async (firestoreId) => {
+  try {
+    const { db } = window._app;
+    // Importar deleteDoc dinamicamente (já está no SDK carregado)
+    const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    await deleteDoc(doc(db, "leads", firestoreId));
+  } catch(e) {
+    console.error("Erro ao remover lead:", e);
+  }
 };
 
 /* ═══════════════════════════════════════════════════════
@@ -1458,7 +1498,7 @@ tr:hover td { background: var(--surface2); color: var(--text); }
               </div>
             </div>
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-              <button class="btn-primary" onclick="adicionarLeadManual()">＋ Adicionar Lead</button>
+              <button class="btn-primary" id="btnAdicionarLead" onclick="adicionarLeadManual()">＋ Adicionar Lead</button>
               <span id="leadManualMsg" style="font-size:12px;"></span>
             </div>
           </div>
@@ -1658,10 +1698,18 @@ window.switchLeadsTab = function(tab, el) {
 };
 
 /* ════════════════════════════════════════════════
-   LEADS — CADASTRO MANUAL
+   LEADS — CADASTRO MANUAL (salvo no Firestore)
 ════════════════════════════════════════════════ */
-let leadsManual = JSON.parse(localStorage.getItem('leadsManual') || '[]');
+
+// Array global de leads — populado pelo Firestore
+window._leadsManual = [];
 let leadsManualFiltro = 'Todos';
+
+// Atalho local para o array (sempre referencia o global)
+Object.defineProperty(window, 'leadsManual', {
+  get: () => window._leadsManual,
+  set: v  => { window._leadsManual = v; }
+});
 
 // Cores por motivo para pills e gráfico
 const MOTIVO_STYLE = {
@@ -1679,18 +1727,14 @@ function getMotivoStyle(m) {
   return MOTIVO_STYLE[m] || { cls: 'mp-outro', color: '#94a3b8' };
 }
 
-function salvarLeadsLocal() {
-  localStorage.setItem('leadsManual', JSON.stringify(leadsManual));
-}
-
-window.adicionarLeadManual = function() {
+window.adicionarLeadManual = async function() {
   const data     = document.getElementById('lData').value;
   const unidade  = document.getElementById('lUnidade').value;
   const numero   = document.getElementById('lNumero').value.trim();
   const vendedor = document.getElementById('lVendedor').value;
   const motivo   = document.getElementById('lMotivo').value;
   const obs      = document.getElementById('lObs').value.trim();
-  const msg      = document.getElementById('leadManualMsg');
+  const btn      = document.getElementById('btnAdicionarLead');
 
   if (!data)     { showLeadMsg('Informe a data.',              'err'); return; }
   if (!unidade)  { showLeadMsg('Selecione a unidade.',         'err'); return; }
@@ -1698,29 +1742,42 @@ window.adicionarLeadManual = function() {
   if (!vendedor) { showLeadMsg('Selecione o vendedor.',        'err'); return; }
   if (!motivo)   { showLeadMsg('Selecione o motivo.',          'err'); return; }
 
-  const lead = {
-    id:       Date.now(),
-    data,
-    unidade,
-    numero,
-    vendedor,
-    motivo,
-    obs,
-    criadoEm: new Date().toISOString()
-  };
+  if (btn) { btn.disabled = true; btn.textContent = 'Salvando…'; }
 
-  leadsManual.push(lead);
-  salvarLeadsLocal();
+  try {
+    const lead = {
+      data,
+      unidade,
+      numero,
+      vendedor,
+      motivo,
+      obs,
+      criadoEm: new Date().toISOString(),
+      cadastradoPor: window._app?.currentUser?.email || 'desconhecido'
+    };
 
-  // Limpar campos (mantém data, unidade e vendedor para agilizar cadastro em série)
-  document.getElementById('lNumero').value = '';
-  document.getElementById('lMotivo').value = '';
-  document.getElementById('lObs').value    = '';
+    // Salvar no Firestore
+    const firestoreId = await window.salvarLeadFirestore(lead);
+    lead.firestoreId = firestoreId;
 
-  showLeadMsg('Lead adicionado! ✓', 'ok');
-  setTimeout(() => { document.getElementById('leadManualMsg').textContent = ''; }, 2500);
+    // Adicionar localmente sem precisar recarregar tudo
+    window._leadsManual.unshift(lead);
 
-  renderLeadsManual();
+    // Limpar campos (mantém data, unidade e vendedor para agilizar)
+    document.getElementById('lNumero').value = '';
+    document.getElementById('lMotivo').value = '';
+    document.getElementById('lObs').value    = '';
+
+    showLeadMsg('Lead salvo! ✓', 'ok');
+    setTimeout(() => { const m = document.getElementById('leadManualMsg'); if(m) m.textContent = ''; }, 2500);
+
+    renderLeadsManual();
+  } catch(e) {
+    console.error(e);
+    showLeadMsg('Erro ao salvar. Verifique a conexão.', 'err');
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = '＋ Adicionar Lead'; }
 };
 
 function showLeadMsg(txt, tipo) {
@@ -1729,17 +1786,33 @@ function showLeadMsg(txt, tipo) {
   el.style.color = tipo === 'ok' ? 'var(--green)' : 'var(--red)';
 }
 
-window.removerLeadManual = function(id) {
-  leadsManual = leadsManual.filter(l => l.id !== id);
-  salvarLeadsLocal();
-  renderLeadsManual();
+window.removerLeadManual = async function(firestoreId) {
+  if (!confirm('Remover este lead?')) return;
+  try {
+    await window.removerLeadFirestore(firestoreId);
+    window._leadsManual = window._leadsManual.filter(l => l.firestoreId !== firestoreId);
+    renderLeadsManual();
+    showLeadMsg('Lead removido.', 'ok');
+  } catch(e) {
+    showLeadMsg('Erro ao remover.', 'err');
+  }
 };
 
-window.limparLeadsManual = function() {
-  if (!confirm('Apagar todos os leads cadastrados manualmente?')) return;
-  leadsManual = [];
-  salvarLeadsLocal();
-  renderLeadsManual();
+window.limparLeadsManual = async function() {
+  if (!confirm('Apagar TODOS os leads? Esta ação não pode ser desfeita.')) return;
+  showLeadMsg('Apagando…', 'ok');
+  try {
+    // Apagar cada lead do Firestore
+    const promises = window._leadsManual.map(l =>
+      l.firestoreId ? window.removerLeadFirestore(l.firestoreId) : Promise.resolve()
+    );
+    await Promise.all(promises);
+    window._leadsManual = [];
+    renderLeadsManual();
+    showLeadMsg('Todos os leads foram apagados.', 'ok');
+  } catch(e) {
+    showLeadMsg('Erro ao apagar leads.', 'err');
+  }
 };
 
 function renderLeadsManual() {
@@ -1774,21 +1847,22 @@ function renderLeadsManual() {
 
   // Linhas da tabela
   body.innerHTML = filtered
-    .sort((a, b) => b.data.localeCompare(a.data)) // mais recente primeiro
+    .sort((a, b) => (b.data || '').localeCompare(a.data || '')) // mais recente primeiro
     .map(l => {
       const st = getMotivoStyle(l.motivo);
       const dataFmt = l.data ? l.data.split('-').reverse().join('/') : '—';
+      const fid = l.firestoreId || '';
       return `<tr>
         <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);white-space:nowrap;color:var(--text2);">${dataFmt}</td>
-        <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);">${l.unidade}</td>
-        <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);">${l.numero}</td>
-        <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);font-weight:500;">${l.vendedor}</td>
+        <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);">${l.unidade || '—'}</td>
+        <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);">${l.numero || '—'}</td>
+        <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);font-weight:500;">${l.vendedor || '—'}</td>
         <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);">
-          <span class="motivo-pill ${st.cls}">${l.motivo}</span>
+          <span class="motivo-pill ${st.cls}">${l.motivo || '—'}</span>
         </td>
         <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);color:var(--text2);font-size:11px;">${l.obs || '—'}</td>
         <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);text-align:center;">
-          <button class="btn-del-lead" onclick="removerLeadManual(${l.id})" title="Remover">✕</button>
+          <button class="btn-del-lead" onclick="removerLeadManual('${fid}')" title="Remover">✕</button>
         </td>
       </tr>`;
     }).join('');
