@@ -1070,6 +1070,8 @@ tr:hover td { background: var(--surface2); color: var(--text); }
 .mp-integrador    { background: rgba(59,130,246,0.12); color: #60a5fa; }
 .mp-emprego       { background: rgba(16,185,129,0.12); color: #34d399; }
 .mp-foradoraio    { background: rgba(249,115,22,0.12); color: #fb923c; }
+.mp-cotacao       { background: rgba(34,211,238,0.12); color: #22d3ee; }
+.mp-deixouresp    { background: rgba(163,163,163,0.12);color: #a3a3a3; }
 .mp-outro         { background: rgba(148,163,184,0.12);color: #94a3b8; }
 
 /* botão excluir linha */
@@ -1446,6 +1448,8 @@ tr:hover td { background: var(--surface2); color: var(--text); }
                   <option>Integrador</option>
                   <option>Emprego</option>
                   <option>Fora do raio</option>
+                  <option>Cotação</option>
+                  <option>Deixou de responder</option>
                 </select>
               </div>
               <div class="form-field">
@@ -1667,6 +1671,8 @@ const MOTIVO_STYLE = {
   'Integrador':                 { cls: 'mp-integrador',   color: '#60a5fa' },
   'Emprego':                    { cls: 'mp-emprego',      color: '#34d399' },
   'Fora do raio':               { cls: 'mp-foradoraio',   color: '#fb923c' },
+  'Cotação':                    { cls: 'mp-cotacao',      color: '#22d3ee' },
+  'Deixou de responder':        { cls: 'mp-deixouresp',   color: '#a3a3a3' },
 };
 
 function getMotivoStyle(m) {
